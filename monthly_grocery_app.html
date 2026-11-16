@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GrocerEase - Monthly Grocery & History</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            green: '#0c831f',
+                            greenLight: '#e8f5e9',
+                            greenDark: '#096618',
+                            yellow: '#f8cb46',
+                            yellowLight: '#fef9e7',
+                            bg: '#f4f6fb'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Hide scrollbars for clean app-like feel */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            background-color: #e5e7eb;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Smooth transitions */
+        .tab-transition {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 antialiased flex justify-center min-h-screen">
+
+    <!-- Mobile App Shell (Centered on Desktop, Full-Screen on Mobile) -->
+    <div id="app-shell" class="w-full max-w-[480px] bg-brand-bg min-h-screen flex flex-col relative shadow-2xl overflow-hidden">
+
+        <!-- Top App Header -->
+        <header class="bg-white px-4 pt-4 pb-3 border-b border-gray-100 sticky top-0 z-30 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-brand-yellow flex items-center justify-center shadow-sm">
+                        <span class="text-xl">🛒</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h1 class="text-lg font-extrabold tracking-tight text-gray-900 leading-none">Grocer<span class="text-brand-green">Ease</span></h1>
+                            <span class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-brand-greenLight text-brand-green">Monthly</span>
+                        </div>
+                        <p id="header-subtitle" class="text-xs text-gray-500 font-medium mt-0.5">November 2026 Ration Planner</p>
+                    </div>
+                </div>
+                
+                <!-- Quick Add Custom Item Button -->
+                <button onclick="openCustomItemModal()" class="flex items-center gap-1 bg-gray-900 hover:bg-gray-800 active:scale-95 text-white text-xs font-semibold px-3 py-2 rounded-xl transition shadow-sm">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    <span>New Item</span>
+                </button>
+            </div>
+
+            <!-- Search Bar (Visible primarily on Catalog tab) -->
+            <div id="search-container" class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    oninput="handleSearch(this.value)"
+                    placeholder="Search atta, dal, onion, milk..." 
+                    class="w-full bg-gray-100/90 text-sm text-gray-800 placeholder-gray-400 pl-10 pr-9 py-2.5 rounded-xl border border-transparent focus:border-brand-green focus:bg-white focus:outline-none transition"
+                >
+                <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 overflow-y-auto pb-24 no-scrollbar">
+
+            <!-- ================= VIEW 1: CATALOG (BLINKIT/ZEPTO STYLE) ================= -->
+            <section id="view-catalog" class="block">
+                <!-- Horizontal Scrollable Category Pills -->
+                <div class="bg-white px-3 py-2.5 border-b border-gray-100 sticky top-0 z-20">
+                    <div id="category-pills" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+                <!-- Category Title & Item Count -->
+                <div class="px-4 pt-3.5 pb-2 flex items-center justify-between">
+                    <h2 id="active-category-title" class="text-sm font-bold text-gray-800">All Essentials</h2>
+                    <span id="catalog-count" class="text-xs font-medium text-gray-500">0 items</span>
+                </div>
+
+                <!-- Product Grid -->
+                <div id="catalog-grid" class="px-3.5 grid grid-cols-2 gap-2.5 pb-4">
+                    <!-- Dynamically populated cards -->
+                </div>
+
+                <!-- Empty Search State -->
+                <div id="catalog-empty" class="hidden px-6 py-12 text-center">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🔍</div>
+                    <h3 class="text-base font-bold text-gray-800">Item not found</h3>
+                    <p class="text-xs text-gray-500 mt-1 mb-4">Couldn't find that grocery item in the default list.</p>
+                    <button onclick="openCustomItemModal(true)" class="bg-brand-green text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm active:scale-95 transition">
+                        + Add "<span id="empty-search-term"></span>" to Catalog
+                    </button>
+                </div>
+            </section>
+
+            <!-- ================= VIEW 2: MY LIST (ACTIVE SHOPPING CART) ================= -->
+            <section id="view-list" class="hidden px-4 pt-4">
+                <!-- Summary Banner -->
+                <div class="bg-gradient-to-r from-brand-green to-emerald-700 rounded-2xl p-4 text-white shadow-md mb-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-emerald-100 text-xs font-medium">Current Monthly List</p>
+                            <h2 class="text-2xl font-extrabold mt-0.5"><span id="list-total-items">0</span> Items</h2>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-emerald-100 text-xs font-medium">Est. Budget</p>
+                            <p class="text-xl font-extrabold mt-0.5">₹<span id="list-total-price">0</span></p>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-white/15 flex items-center justify-between text-xs">
+                        <span id="list-checked-progress" class="text-emerald-50 font-medium">0 of 0 picked in store</span>
+                        <div class="flex gap-2">
+                            <button onclick="copyListToClipboard()" class="bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition">
+                                <i data-lucide="share-2" class="w-3 h-3"></i> Share
+                            </button>
+                            <button onclick="confirmClearCart()" class="bg-white/10 hover:bg-red-500/80 px-2.5 py-1 rounded-lg font-semibold transition">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Cart Items List -->
+                <div id="cart-items-container" class="space-y-2.5 mb-6">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <!-- Empty Cart State -->
+                <div id="cart-empty-state" class="hidden bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm my-4">
+                    <div class="w-16 h-16 bg-brand-yellowLight rounded-full flex items-center justify-center mx-auto mb-3 text-3xl">🛍️</div>
+                    <h3 class="text-base font-bold text-gray-800">Your monthly list is empty</h3>
+                    <p class="text-xs text-gray-500 mt-1 mb-4">Browse categories or check last month's history to build your shopping list in seconds.</p>
+                    <div class="flex gap-2 justify-center">
+                        <button onclick="switchTab('catalog')" class="bg-brand-green text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm">
+                            Browse Items
+                        </button>
+                        <button onclick="switchTab('history')" class="bg-gray-100 text-gray-800 text-xs font-bold px-4 py-2.5 rounded-xl">
+                            Check History
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Complete Shopping & Save to History CTA -->
+                <div id="complete-shopping-card" class="hidden bg-white rounded-2xl p-4 border border-gray-200 shadow-sm mb-4">
+                    <h3 class="text-sm font-bold text-gray-900 mb-1">Done with this month's shopping?</h3>
+                    <p class="text-xs text-gray-500 mb-3">Save this list to your monthly history so you can review or repeat it next month.</p>
+                    <button onclick="openSaveHistoryModal()" class="w-full bg-brand-green hover:bg-brand-greenDark active:scale-[0.99] text-white font-bold text-sm py-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 transition">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>Complete & Save to History</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ================= VIEW 3: HISTORY (PAST MONTHS) ================= -->
+            <section id="view-history" class="hidden px-4 pt-4">
+                <div class="mb-4">
+                    <h2 class="text-base font-extrabold text-gray-900">Purchase History</h2>
+                    <p class="text-xs text-gray-500">Compare past months & add items to your current list with one tap.</p>
+                </div>
+
+                <!-- History Cards Container -->
+                <div id="history-container" class="space-y-3.5 pb-6">
+                    <!-- Dynamically populated -->
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Floating Cart Pill on Catalog View (Just like Blinkit/Zepto!) -->
+        <div id="floating-cart-bar" class="hidden fixed bottom-[74px] left-1/2 -translate-x-1/2 w-[calc(100%-28px)] max-w-[452px] z-30">
+            <button onclick="switchTab('list')" class="w-full bg-brand-green hover:bg-brand-greenDark text-white px-4 py-3 rounded-2xl shadow-lg flex items-center justify-between transition active:scale-[0.99]">
+                <div class="flex items-center gap-2.5">
+                    <div class="bg-white/20 p-1.5 rounded-lg">
+                        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-xs font-extrabold leading-tight"><span id="float-count">0</span> Items in List</p>
+                        <p class="text-[11px] text-emerald-100 font-medium">Est. ₹<span id="float-price">0</span></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 text-xs font-bold">
+                    <span>View List</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </div>
+            </button>
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="bg-white border-t border-gray-200 px-2 py-1.5 fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-40 flex justify-around items-center shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+            <button onclick="switchTab('catalog')" id="nav-catalog" class="nav-btn flex-1 flex flex-col items-center py-1.5 rounded-xl text-brand-green font-bold transition">
+                <i data-lucide="layout-grid" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[11px]">Catalog</span>
+            </button>
+
+            <button onclick="switchTab('list')" id="nav-list" class="nav-btn flex-1 flex flex-col items-center py-1.5 rounded-xl text-gray-400 font-medium relative transition">
+                <div class="relative">
+                    <i data-lucide="shopping-cart" class="w-5 h-5 mb-0.5"></i>
+                    <span id="nav-badge" class="hidden absolute -top-1.5 -right-2.5 bg-brand-green text-white text-[10px] font-extrabold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center border-2 border-white">0</span>
+                </div>
+                <span class="text-[11px]">My List</span>
+            </button>
+
+            <button onclick="switchTab('history')" id="nav-history" class="nav-btn flex-1 flex flex-col items-center py-1.5 rounded-xl text-gray-400 font-medium transition">
+                <i data-lucide="history" class="w-5 h-5 mb-0.5"></i>
+                <span class="text-[11px]">History</span>
+            </button>
+        </nav>
+
+        <!-- ================= MODALS & TOASTS ================= -->
+
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 bg-gray-900/95 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-xl z-50 opacity-0 pointer-events-none transition-opacity duration-200 flex items-center gap-2 whitespace-nowrap">
+            <span id="toast-icon">✅</span>
+            <span id="toast-msg">Added to list</span>
+        </div>
+
+        <!-- Modal 1: Add Custom Item -->
+        <div id="modal-custom-item" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div class="bg-white w-full max-w-[480px] rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-slide-up">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base font-extrabold text-gray-900">Add Custom Grocery Item</h3>
+                    <button onclick="closeModal('modal-custom-item')" class="p-1.5 bg-gray-100 rounded-full text-gray-500 hover:text-gray-800">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <form id="custom-item-form" onsubmit="saveCustomItem(event)" class="space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Item Name *</label>
+                        <input type="text" id="custom-name" required placeholder="e.g., Desi Ghee, Almonds, Surf Excel" class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-green">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Category</label>
+                            <select id="custom-category" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-green">
+                                <option value="veg">Vegetables & Fruits</option>
+                                <option value="dairy">Dairy, Bread & Eggs</option>
+                                <option value="staples">Atta, Rice & Dal</option>
+                                <option value="masala">Masala, Oil & Ghee</option>
+                                <option value="snacks">Breakfast & Snacks</option>
+                                <option value="drinks">Cold Drinks & Juices</option>
+                                <option value="personal">Personal Care</option>
+                                <option value="cleaning">Cleaning & Household</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Emoji Icon</label>
+                            <input type="text" id="custom-emoji" value="📦" maxlength="4" class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-center focus:outline-none focus:border-brand-green">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Pack Size / Unit</label>
+                            <input type="text" id="custom-unit" value="1 kg" placeholder="e.g., 500 g, 1 L, 1 pack" class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-green">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Est. Price (₹)</label>
+                            <input type="number" id="custom-price" value="100" min="0" placeholder="0" class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-green">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-1">
+                        <input type="checkbox" id="custom-add-immediately" checked class="w-4 h-4 accent-brand-green rounded">
+                        <label for="custom-add-immediately" class="text-xs font-medium text-gray-600">Also add directly to my current shopping list</label>
+                    </div>
+
+                    <button type="submit" class="w-full bg-brand-green hover:bg-brand-greenDark text-white font-bold text-sm py-3 rounded-xl shadow-md transition mt-2">
+                        Save Item
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal 2: Complete Shopping & Save to History -->
+        <div id="modal-save-history" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div class="bg-white w-full max-w-[480px] rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-base font-extrabold text-gray-900">Save Monthly Record</h3>
+                    <button onclick="closeModal('modal-save-history')" class="p-1.5 bg-gray-100 rounded-full text-gray-500">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <p class="text-xs text-gray-500 mb-4">Archive this grocery run so you can review what you bought next month.</p>
+
+                <div class="space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Month / Title Label</label>
+                        <input type="text" id="history-month-label" value="November 2026" class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-brand-green">
+                    </div>
+
+                    <div class="flex items-center gap-2 bg-brand-yellowLight p-3 rounded-xl border border-amber-200/60">
+                        <input type="checkbox" id="clear-after-save" checked class="w-4 h-4 accent-brand-green rounded">
+                        <label for="clear-after-save" class="text-xs font-semibold text-gray-800">Clear current active list after saving</label>
+                    </div>
+
+                    <button onclick="confirmSaveHistory()" class="w-full bg-brand-green hover:bg-brand-greenDark text-white font-bold text-sm py-3.5 rounded-xl shadow-md transition">
+                        Save to History
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal 3: Clear Cart Confirmation -->
+        <div id="modal-clear-confirm" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-[340px] rounded-3xl p-5 shadow-2xl text-center">
+                <div class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="trash-2" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-base font-extrabold text-gray-900">Clear Current List?</h3>
+                <p class="text-xs text-gray-500 mt-1 mb-4">This will remove all items from your active cart. Past history won't be affected.</p>
+                <div class="flex gap-2.5">
+                    <button onclick="closeModal('modal-clear-confirm')" class="flex-1 bg-gray-100 text-gray-700 font-bold text-xs py-3 rounded-xl">Cancel</button>
+                    <button onclick="executeClearCart()" class="flex-1 bg-red-600 text-white font-bold text-xs py-3 rounded-xl">Yes, Clear</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- APPLICATION LOGIC -->
+    <script>
+        // ==================== DEFAULT DATA ====================
+        const CATEGORIES = [
+            { id: 'all', name: 'All Items', emoji: '✨' },
+            { id: 'veg', name: 'Vegetables & Fruits', emoji: '🥦' },
+            { id: 'dairy', name: 'Dairy, Bread & Eggs', emoji: '🥛' },
+            { id: 'staples', name: 'Atta, Rice & Dal', emoji: '🌾' },
+            { id: 'masala', name: 'Masala, Oil & Ghee', emoji: '🫙' },
+            { id: 'snacks', name: 'Breakfast & Snacks', emoji: '🍪' },
+            { id: 'drinks', name: 'Cold Drinks & Juices', emoji: '🧃' },
+            { id: 'personal', name: 'Personal Care', emoji: '🧴' },
+            { id: 'cleaning', name: 'Cleaning & Household', emoji: '🧼' }
+        ];
+
+        const DEFAULT_CATALOG = [
+            // 1. Vegetables & Fruits (25 items)
+            { id: 'v1', category: 'veg', name: 'Onion (Pyaz)', unit: '2 kg', price: 70, emoji: '🧅' },
+            { id: 'v2', category: 'veg', name: 'Potato (Aloo)', unit: '2 kg', price: 60, emoji: '🥔' },
+            { id: 'v3', category: 'veg', name: 'Tomato (Tamatar)', unit: '1 kg', price: 45, emoji: '🍅' },
+            { id: 'v4', category: 'veg', name: 'Ginger (Adrak)', unit: '250 g', price: 35, emoji: '🫚' },
+            { id: 'v5', category: 'veg', name: 'Garlic (Lahsun)', unit: '250 g', price: 65, emoji: '🧄' },
+            { id: 'v6', category: 'veg', name: 'Green Chilli (Hari Mirch)', unit: '200 g', price: 20, emoji: '🌶️' },
+            { id: 'v7', category: 'veg', name: 'Coriander Leaves (Dhaniya)', unit: '100 g', price: 15, emoji: '🌿' },
+            { id: 'v8', category: 'veg', name: 'Fresh Lemon (Nimbu)', unit: '6 pcs', price: 30, emoji: '🍋' },
+            { id: 'v9', category: 'veg', name: 'Spinach (Palak)', unit: '250 g', price: 25, emoji: '🥬' },
+            { id: 'v10', category: 'veg', name: 'Fenugreek Leaves (Methi)', unit: '250 g', price: 30, emoji: '🌱' },
+            { id: 'v11', category: 'veg', name: 'Lady Finger (Bhindi)', unit: '500 g', price: 35, emoji: '🫛' },
+            { id: 'v12', category: 'veg', name: 'Brinjal / Eggplant (Baingan)', unit: '500 g', price: 30, emoji: '🍆' },
+            { id: 'v13', category: 'veg', name: 'Cauliflower (Phool Gobhi)', unit: '1 pc', price: 40, emoji: '🥦' },
+            { id: 'v14', category: 'veg', name: 'Cabbage (Patta Gobhi)', unit: '1 pc', price: 32, emoji: '🥬' },
+            { id: 'v15', category: 'veg', name: 'Red / Orange Carrot (Gajar)', unit: '500 g', price: 35, emoji: '🥕' },
+            { id: 'v16', category: 'veg', name: 'Green Capsicum (Shimla Mirch)', unit: '500 g', price: 45, emoji: '🫑' },
+            { id: 'v17', category: 'veg', name: 'Cucumber (Kheera)', unit: '500 g', price: 28, emoji: '🥒' },
+            { id: 'v18', category: 'veg', name: 'Beetroot (Chukandar)', unit: '500 g', price: 30, emoji: '🟣' },
+            { id: 'v19', category: 'veg', name: 'Bottle Gourd (Lauki)', unit: '1 pc', price: 35, emoji: '🥒' },
+            { id: 'v20', category: 'veg', name: 'Bitter Gourd (Karela)', unit: '500 g', price: 38, emoji: '🥬' },
+            { id: 'v21', category: 'veg', name: 'Robusta Banana (Kela)', unit: '1 dozen', price: 60, emoji: '🍌' },
+            { id: 'v22', category: 'veg', name: 'Shimla Apple (Seb)', unit: '1 kg', price: 160, emoji: '🍎' },
+            { id: 'v23', category: 'veg', name: 'Pomegranate (Anaar)', unit: '1 kg', price: 150, emoji: '🔴' },
+            { id: 'v24', category: 'veg', name: 'Ripe Papaya (Papita)', unit: '1 pc', price: 55, emoji: '🥭' },
+            { id: 'v25', category: 'veg', name: 'Seasonal Mango / Orange', unit: '1 kg', price: 120, emoji: '🍊' },
+
+            // 2. Dairy, Bread & Eggs (14 items)
+            { id: 'd1', category: 'dairy', name: 'Full Cream Milk', unit: '1 L', price: 68, emoji: '🥛' },
+            { id: 'd2', category: 'dairy', name: 'Toned Milk', unit: '1 L', price: 56, emoji: '🥛' },
+            { id: 'd3', category: 'dairy', name: 'Fresh Curd (Dahi)', unit: '400 g', price: 35, emoji: '🥣' },
+            { id: 'd4', category: 'dairy', name: 'Malai Paneer', unit: '200 g', price: 90, emoji: '🧀' },
+            { id: 'd5', category: 'dairy', name: 'Salted Table Butter', unit: '100 g', price: 58, emoji: '🧈' },
+            { id: 'd6', category: 'dairy', name: 'Cheese Slices (10 Slices)', unit: '200 g', price: 140, emoji: '🧀' },
+            { id: 'd7', category: 'dairy', name: 'Processed Cheese Cubes', unit: '200 g', price: 130, emoji: '🧊' },
+            { id: 'd8', category: 'dairy', name: 'Classic White Bread', unit: '400 g', price: 45, emoji: '🍞' },
+            { id: 'd9', category: 'dairy', name: '100% Whole Wheat Brown Bread', unit: '400 g', price: 55, emoji: '🍞' },
+            { id: 'd10', category: 'dairy', name: 'Ladi Pav (6 pcs)', unit: '250 g', price: 35, emoji: '🥖' },
+            { id: 'd11', category: 'dairy', name: 'Farm White Eggs (6 Pack)', unit: '6 pcs', price: 45, emoji: '🥚' },
+            { id: 'd12', category: 'dairy', name: 'Farm White Eggs (12 Pack)', unit: '12 pcs', price: 84, emoji: '🥚' },
+            { id: 'd13', category: 'dairy', name: 'Farm White Eggs (30 Tray)', unit: '30 pcs', price: 205, emoji: '🥚' },
+            { id: 'd14', category: 'dairy', name: 'Fresh Malai Cream', unit: '250 ml', price: 68, emoji: '🍶' },
+
+            // 3. Atta, Rice & Dal (17 items)
+            { id: 's1', category: 'staples', name: 'Chakki Fresh Atta (5 kg)', unit: '5 kg', price: 245, emoji: '🌾' },
+            { id: 's2', category: 'staples', name: 'Chakki Fresh Atta (10 kg)', unit: '10 kg', price: 470, emoji: '🌾' },
+            { id: 's3', category: 'staples', name: 'Long Grain Basmati Rice', unit: '5 kg', price: 480, emoji: '🍚' },
+            { id: 's4', category: 'staples', name: 'Regular Steamed Kolam Rice', unit: '5 kg', price: 320, emoji: '🍚' },
+            { id: 's5', category: 'staples', name: 'Thick Poha (Flattened Rice)', unit: '1 kg', price: 60, emoji: '🥣' },
+            { id: 's6', category: 'staples', name: 'Roasted Sooji / Rava', unit: '500 g', price: 35, emoji: '🌾' },
+            { id: 's7', category: 'staples', name: 'Fine Chana Besan', unit: '1 kg', price: 110, emoji: '🟡' },
+            { id: 's8', category: 'staples', name: 'Refined Wheat Flour (Maida)', unit: '500 g', price: 28, emoji: '🥟' },
+            { id: 's9', category: 'staples', name: 'Toor / Arhar Dal', unit: '1 kg', price: 165, emoji: '🟡' },
+            { id: 's10', category: 'staples', name: 'Moong Dal (Yellow Split)', unit: '1 kg', price: 135, emoji: '🫘' },
+            { id: 's11', category: 'staples', name: 'Red Masoor Dal', unit: '1 kg', price: 115, emoji: '🟠' },
+            { id: 's12', category: 'staples', name: 'Chana Dal', unit: '1 kg', price: 95, emoji: '🟡' },
+            { id: 's13', category: 'staples', name: 'White Urad Dal (Dhuli)', unit: '1 kg', price: 145, emoji: '⚪' },
+            { id: 's14', category: 'staples', name: 'Red Rajma (Kidney Beans)', unit: '1 kg', price: 155, emoji: '🫘' },
+            { id: 's15', category: 'staples', name: 'Kabuli Chana (White Chickpeas)', unit: '1 kg', price: 140, emoji: '⚪' },
+            { id: 's16', category: 'staples', name: 'Kala Chana (Desi Chickpeas)', unit: '1 kg', price: 95, emoji: '🟤' },
+            { id: 's17', category: 'staples', name: 'Raw Peanuts (Moongphali)', unit: '500 g', price: 85, emoji: '🥜' },
+
+            // 4. Masala, Oil & Ghee (18 items)
+            { id: 'm1', category: 'masala', name: 'Refined Sunflower / Soyabean Oil', unit: '1 L', price: 135, emoji: '🌻' },
+            { id: 'm2', category: 'masala', name: 'Kachi Ghani Mustard Oil', unit: '1 L', price: 155, emoji: '🫗' },
+            { id: 'm3', category: 'masala', name: 'Filtered Groundnut Oil', unit: '1 L', price: 185, emoji: '🥜' },
+            { id: 'm4', category: 'masala', name: 'Pure Cow Desi Ghee', unit: '500 ml', price: 330, emoji: '🍯' },
+            { id: 'm5', category: 'masala', name: 'Turmeric (Haldi) Powder', unit: '200 g', price: 65, emoji: '🟨' },
+            { id: 'm6', category: 'masala', name: 'Red Chilli (Lal Mirch) Powder', unit: '200 g', price: 95, emoji: '🌶️' },
+            { id: 'm7', category: 'masala', name: 'Coriander (Dhaniya) Powder', unit: '200 g', price: 60, emoji: '🌿' },
+            { id: 'm8', category: 'masala', name: 'Shahi Garam Masala', unit: '100 g', price: 85, emoji: '🫙' },
+            { id: 'm9', category: 'masala', name: 'Whole Jeera (Cumin Seeds)', unit: '200 g', price: 85, emoji: '🤎' },
+            { id: 'm10', category: 'masala', name: 'Black Mustard Seeds (Rai)', unit: '200 g', price: 32, emoji: '⚫' },
+            { id: 'm11', category: 'masala', name: 'Compounded Hing (Asafoetida)', unit: '50 g', price: 75, emoji: '🧂' },
+            { id: 'm12', category: 'masala', name: 'Whole Black Pepper (Kali Mirch)', unit: '100 g', price: 95, emoji: '⚫' },
+            { id: 'm13', category: 'masala', name: 'Iodized Table Salt', unit: '1 kg', price: 28, emoji: '🧂' },
+            { id: 'm14', category: 'masala', name: 'Refined Sulphurless Sugar', unit: '2 kg', price: 92, emoji: '🍬' },
+            { id: 'm15', category: 'masala', name: 'Organic Jaggery (Gud)', unit: '1 kg', price: 75, emoji: '🟫' },
+            { id: 'm16', category: 'masala', name: 'Assam Tea Leaves (Chai Patti)', unit: '500 g', price: 210, emoji: '🫖' },
+            { id: 'm17', category: 'masala', name: 'Instant Filter Coffee Jar', unit: '100 g', price: 240, emoji: '☕' },
+            { id: 'm18', category: 'masala', name: 'Seedless Tamarind (Imli)', unit: '250 g', price: 55, emoji: '🟤' },
+
+            // 5. Breakfast & Snacks (14 items)
+            { id: 'sn1', category: 'snacks', name: 'Rolled / Plain Oats', unit: '1 kg', price: 185, emoji: '🥣' },
+            { id: 'sn2', category: 'snacks', name: 'Crunchy Cornflakes', unit: '475 g', price: 165, emoji: '🌽' },
+            { id: 'sn3', category: 'snacks', name: 'Fruit & Nut Muesli', unit: '400 g', price: 230, emoji: '🥣' },
+            { id: 'sn4', category: 'snacks', name: 'Marie Gold / Parle-G Biscuits', unit: '300 g', price: 45, emoji: '🍪' },
+            { id: 'sn5', category: 'snacks', name: 'Aloo Bhujia / Sev Namkeen', unit: '400 g', price: 95, emoji: '🥨' },
+            { id: 'sn6', category: 'snacks', name: 'Maggi Masala Noodles (4-Pack)', unit: '280 g', price: 56, emoji: '🍜' },
+            { id: 'sn7', category: 'snacks', name: 'Durum Wheat Penne Pasta', unit: '500 g', price: 95, emoji: '🍝' },
+            { id: 'sn8', category: 'snacks', name: 'Rich Tomato Ketchup', unit: '950 g', price: 125, emoji: '🍅' },
+            { id: 'sn9', category: 'snacks', name: 'Creamy Peanut Butter', unit: '340 g', price: 145, emoji: '🥜' },
+            { id: 'sn10', category: 'snacks', name: 'Mixed Fruit Jam', unit: '500 g', price: 150, emoji: '🍓' },
+            { id: 'sn11', category: 'snacks', name: 'Pure Forest Honey', unit: '250 g', price: 115, emoji: '🍯' },
+            { id: 'sn12', category: 'snacks', name: 'California Almonds (Badam)', unit: '250 g', price: 225, emoji: '🌰' },
+            { id: 'sn13', category: 'snacks', name: 'Whole Cashews (Kaju)', unit: '250 g', price: 245, emoji: '🥜' },
+            { id: 'sn14', category: 'snacks', name: 'Green Raisins (Kishmish)', unit: '250 g', price: 95, emoji: '🍇' },
+
+            // 6. Cold Drinks & Juices (6 items)
+            { id: 'dr1', category: 'drinks', name: 'Mixed Fruit Juice (Real/Tropicana)', unit: '1 L', price: 115, emoji: '🧃' },
+            { id: 'dr2', category: 'drinks', name: 'Tender Coconut Water', unit: '1 L', price: 95, emoji: '🥥' },
+            { id: 'dr3', category: 'drinks', name: 'Soft Drink (Cola / Lemon)', unit: '2 L', price: 95, emoji: '🥤' },
+            { id: 'dr4', category: 'drinks', name: 'Masala Buttermilk (Chaas)', unit: '1 L', price: 45, emoji: '🥛' },
+            { id: 'dr5', category: 'drinks', name: 'Sweet Punjabi Lassi (4 Pack)', unit: '4x180ml', price: 80, emoji: '🥤' },
+            { id: 'dr6', category: 'drinks', name: 'Rooh Afza Sharbat Syrup', unit: '750 ml', price: 175, emoji: '🍷' },
+
+            // 7. Personal Care (13 items)
+            { id: 'pc1', category: 'personal', name: 'Bathing Soap (Pack of 4)', unit: '4x100g', price: 145, emoji: '🧼' },
+            { id: 'pc2', category: 'personal', name: 'Refreshing Shower Body Wash', unit: '250 ml', price: 165, emoji: '🧴' },
+            { id: 'pc3', category: 'personal', name: 'Anti-Dandruff / Nourish Shampoo', unit: '340 ml', price: 240, emoji: '🧴' },
+            { id: 'pc4', category: 'personal', name: 'Smooth & Shine Hair Conditioner', unit: '180 ml', price: 185, emoji: '💆' },
+            { id: 'pc5', category: 'personal', name: 'Pure Coconut / Almond Hair Oil', unit: '300 ml', price: 135, emoji: '💧' },
+            { id: 'pc6', category: 'personal', name: 'Herbal / Strong Teeth Toothpaste', unit: '200 g', price: 105, emoji: '🪥' },
+            { id: 'pc7', category: 'personal', name: 'Soft Bristle Toothbrush (Pack of 3)', unit: '3 pcs', price: 90, emoji: '🪥' },
+            { id: 'pc8', category: 'personal', name: 'Gentle Daily Face Wash', unit: '100 ml', price: 145, emoji: '🫧' },
+            { id: 'pc9', category: 'personal', name: 'Moisturizer / Body Lotion', unit: '200 ml', price: 175, emoji: '🧴' },
+            { id: 'pc10', category: 'personal', name: 'Long-Lasting Deodorant Spray', unit: '150 ml', price: 190, emoji: '💨' },
+            { id: 'pc11', category: 'personal', name: 'Germ Protection Liquid Handwash', unit: '750 ml', price: 115, emoji: '🧼' },
+            { id: 'pc12', category: 'personal', name: 'XL Sanitary Pads (30 Pads)', unit: '1 pack', price: 240, emoji: '🩹' },
+            { id: 'pc13', category: 'personal', name: 'Shaving Razor & Foam Combo', unit: '1 set', price: 180, emoji: '🪒' },
+
+            // 8. Cleaning & Household (13 items)
+            { id: 'c1', category: 'cleaning', name: 'Detergent Washing Powder', unit: '2 kg', price: 260, emoji: '🧺' },
+            { id: 'c2', category: 'cleaning', name: 'Front/Top Load Liquid Detergent', unit: '1 L', price: 215, emoji: '🧴' },
+            { id: 'c3', category: 'cleaning', name: 'Lemon Dishwash Bar (Pack of 3)', unit: '3x200g', price: 65, emoji: '🧽' },
+            { id: 'c4', category: 'cleaning', name: 'Dishwash Liquid Gel', unit: '750 ml', price: 145, emoji: '🫧' },
+            { id: 'c5', category: 'cleaning', name: 'Disinfectant Floor Cleaner / Phenyl', unit: '1 L', price: 185, emoji: '🧹' },
+            { id: 'c6', category: 'cleaning', name: 'Power Plus Toilet Cleaner', unit: '1 L', price: 195, emoji: '🚽' },
+            { id: 'c7', category: 'cleaning', name: 'Biodegradable Garbage Bags', unit: '30 pcs', price: 75, emoji: '🗑️' },
+            { id: 'c8', category: 'cleaning', name: '2-Ply Kitchen Tissue Towel Roll', unit: '2 rolls', price: 120, emoji: '🧻' },
+            { id: 'c9', category: 'cleaning', name: 'Food Grade Aluminium Foil', unit: '9 m', price: 85, emoji: '🪙' },
+            { id: 'c10', category: 'cleaning', name: 'Freshness Cling Wrap Film', unit: '30 m', price: 95, emoji: '🎞️' },
+            { id: 'c11', category: 'cleaning', name: 'Mosquito Repellent Liquid Refill', unit: '2x45ml', price: 145, emoji: '🦟' },
+            { id: 'c12', category: 'cleaning', name: 'Sandalwood Agarbatti (Incense)', unit: '100 sticks', price: 60, emoji: '🪔' },
+            { id: 'c13', category: 'cleaning', name: 'Safety Matchbox Pack / Gas Lighter', unit: '1 pack', price: 45, emoji: '🔥' }
+        ];
+
+        const SAMPLE_HISTORY = [
+            {
+                id: 'hist-oct-2026',
+                monthLabel: 'October 2026',
+                dateSaved: '14 Oct 2026',
+                items: [
+                    { itemId: 's1', qty: 1 },
+                    { itemId: 's3', qty: 1 },
+                    { itemId: 's9', qty: 2 },
+                    { itemId: 'm1', qty: 2 },
+                    { itemId: 'm4', qty: 1 },
+                    { itemId: 'm14', qty: 1 },
+                    { itemId: 'm16', qty: 1 },
+                    { itemId: 'v1', qty: 1 },
+                    { itemId: 'v2', qty: 1 },
+                    { itemId: 'pc1', qty: 1 },
+                    { itemId: 'c1', qty: 1 },
+                    { itemId: 'c4', qty: 1 }
+                ]
+            },
+            {
+                id: 'hist-sep-2026',
+                monthLabel: 'September 2026',
+                dateSaved: '10 Sep 2026',
+                items: [
+                    { itemId: 's1', qty: 1 },
+                    { itemId: 's10', qty: 1 },
+                    { itemId: 's5', qty: 1 },
+                    { itemId: 'm2', qty: 2 },
+                    { itemId: 'm13', qty: 1 },
+                    { itemId: 'm5', qty: 1 },
+                    { itemId: 'sn5', qty: 2 },
+                    { itemId: 'dr1', qty: 2 },
+                    { itemId: 'pc6', qty: 2 },
+                    { itemId: 'c5', qty: 1 }
+                ]
+            }
+        ];
+
+        // ==================== STATE MANAGEMENT ====================
+        let state = {
+            catalog: [],
+            cart: {}, // { itemId: { qty: number, checked: boolean } }
+            history: [],
+            activeTab: 'catalog',
+            selectedCategory: 'all',
+            searchQuery: '',
+            expandedHistoryIds: ['hist-oct-2026'] // First history card expanded by default
+        };
+
+        const STORAGE_KEYS = {
+            CATALOG: 'grocerease_catalog_v2',
+            CART: 'grocerease_cart_v2',
+            HISTORY: 'grocerease_history_v2'
+        };
+
+        function loadState() {
+            try {
+                const savedCatalog = localStorage.getItem(STORAGE_KEYS.CATALOG);
+                const savedCart = localStorage.getItem(STORAGE_KEYS.CART);
+                const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
+
+                state.catalog = savedCatalog ? JSON.parse(savedCatalog) : [...DEFAULT_CATALOG];
+                state.cart = savedCart ? JSON.parse(savedCart) : {};
+                state.history = savedHistory ? JSON.parse(savedHistory) : [...SAMPLE_HISTORY];
+            } catch (e) {
+                console.error('Failed to load from localStorage:', e);
+                state.catalog = [...DEFAULT_CATALOG];
+                state.cart = {};
+                state.history = [...SAMPLE_HISTORY];
+            }
+        }
+
+        function persistState() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.CATALOG, JSON.stringify(state.catalog));
+                localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(state.cart));
+                localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(state.history));
+            } catch (e) {
+                console.error('Failed to save to localStorage:', e);
+            }
+        }
+
+        // ==================== NAVIGATION & TABS ====================
+        function switchTab(tabName) {
+            state.activeTab = tabName;
+
+            // Update Sections
+            document.getElementById('view-catalog').classList.toggle('hidden', tabName !== 'catalog');
+            document.getElementById('view-list').classList.toggle('hidden', tabName !== 'list');
+            document.getElementById('view-history').classList.toggle('hidden', tabName !== 'history');
+
+            // Search bar only needed on Catalog tab
+            document.getElementById('search-container').classList.toggle('hidden', tabName !== 'catalog');
+
+            // Update Bottom Nav Styles
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-brand-green', 'font-bold');
+                btn.classList.add('text-gray-400', 'font-medium');
+            });
+            const activeBtn = document.getElementById(`nav-${tabName}`);
+            activeBtn.classList.remove('text-gray-400', 'font-medium');
+            activeBtn.classList.add('text-brand-green', 'font-bold');
+
+            renderAll();
+        }
+
+        // ==================== CART ACTIONS ====================
+        function updateItemQty(itemId, delta) {
+            const current = state.cart[itemId] || { qty: 0, checked: false };
+            const newQty = current.qty + delta;
+
+            if (newQty <= 0) {
+                delete state.cart[itemId];
+            } else {
+                state.cart[itemId] = {
+                    qty: newQty,
+                    checked: current.checked
+                };
+                if (delta > 0 && current.qty === 0) {
+                    const item = getItemById(itemId);
+                    showToast(`Added ${item ? item.name : 'item'}`, '🛒');
+                }
+            }
+
+            persistState();
+            renderAll();
+        }
+
+        function toggleItemChecked(itemId) {
+            if (state.cart[itemId]) {
+                state.cart[itemId].checked = !state.cart[itemId].checked;
+                persistState();
+                renderCartView();
+            }
+        }
+
+        function getItemById(id) {
+            return state.catalog.find(item => item.id === id);
+        }
+
+        function getCartMetrics() {
+            let totalCount = 0;
+            let totalPrice = 0;
+            let checkedCount = 0;
+
+            Object.entries(state.cart).forEach(([id, entry]) => {
+                const item = getItemById(id);
+                if (item && entry.qty > 0) {
+                    totalCount += entry.qty;
+                    totalPrice += (item.price || 0) * entry.qty;
+                    if (entry.checked) checkedCount += entry.qty;
+                }
+            });
+
+            return { totalCount, totalPrice, checkedCount, uniqueItems: Object.keys(state.cart).length };
+        }
+
+        // ==================== RENDERING: CATALOG ====================
+        function renderCategoryPills() {
+            const container = document.getElementById('category-pills');
+            container.innerHTML = CATEGORIES.map(cat => {
+                const isSelected = state.selectedCategory === cat.id;
+                return `
+                    <button 
+                        onclick="selectCategory('${cat.id}')"
+                        class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs whitespace-nowrap transition shrink-0 ${
+                            isSelected 
+                            ? 'bg-brand-green text-white font-bold shadow-xs' 
+                            : 'bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200'
+                        }"
+                    >
+                        <span>${cat.emoji}</span>
+                        <span>${cat.name}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectCategory(catId) {
+            state.selectedCategory = catId;
+            renderCatalogView();
+        }
+
+        function handleSearch(val) {
+            state.searchQuery = val.trim().toLowerCase();
+            document.getElementById('clear-search-btn').classList.toggle('hidden', state.searchQuery === '');
+            renderCatalogView();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            handleSearch('');
+        }
+
+        function renderCatalogView() {
+            renderCategoryPills();
+
+            const grid = document.getElementById('catalog-grid');
+            const emptyState = document.getElementById('catalog-empty');
+            const catTitle = document.getElementById('active-category-title');
+            const countLabel = document.getElementById('catalog-count');
+
+            // Filter items
+            const filtered = state.catalog.filter(item => {
+                const matchesCat = state.selectedCategory === 'all' || item.category === state.selectedCategory;
+                const matchesSearch = item.name.toLowerCase().includes(state.searchQuery);
+                return matchesCat && matchesSearch;
+            });
+
+            const activeCatObj = CATEGORIES.find(c => c.id === state.selectedCategory);
+            catTitle.textContent = state.searchQuery ? `Search results for "${state.searchQuery}"` : activeCatObj.name;
+            countLabel.textContent = `${filtered.length} items`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('empty-search-term').textContent = document.getElementById('search-input').value;
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            grid.innerHTML = filtered.map(item => {
+                const qty = state.cart[item.id]?.qty || 0;
+                return `
+                    <div class="bg-white rounded-2xl p-3 border border-gray-100 shadow-2xs flex flex-col justify-between transition hover:border-emerald-200">
+                        <div>
+                            <!-- Item Visual Box -->
+                            <div class="w-full h-20 bg-gray-50/80 rounded-xl flex items-center justify-center text-4xl mb-2.5 relative">
+                                <span>${item.emoji}</span>
+                                <span class="absolute bottom-1.5 left-1.5 bg-white/90 backdrop-blur-xs text-[10px] font-bold text-gray-600 px-1.5 py-0.5 rounded-md border border-gray-100">
+                                    ${item.unit}
+                                </span>
+                            </div>
+                            <!-- Item Name -->
+                            <h3 class="text-[13px] font-bold text-gray-800 leading-snug line-clamp-2 min-h-[36px]">
+                                ${item.name}
+                            </h3>
+                        </div>
+
+                        <!-- Bottom Price & Blinkit-style ADD Stepper -->
+                        <div class="flex items-center justify-between mt-3 pt-1">
+                            <span class="text-xs font-extrabold text-gray-900">₹${item.price}</span>
+
+                            ${qty === 0 ? `
+                                <button 
+                                    onclick="updateItemQty('${item.id}', 1)"
+                                    class="bg-brand-greenLight hover:bg-brand-green text-brand-green hover:text-white border border-brand-green/30 font-extrabold text-xs px-4 py-1.5 rounded-lg transition active:scale-95"
+                                >
+                                    ADD
+                                </button>
+                            ` : `
+                                <div class="flex items-center bg-brand-green text-white rounded-lg shadow-xs overflow-hidden">
+                                    <button onclick="updateItemQty('${item.id}', -1)" class="px-2.5 py-1.5 hover:bg-brand-greenDark font-bold text-xs active:bg-emerald-900">−</button>
+                                    <span class="px-1.5 text-xs font-extrabold min-w-[20px] text-center">${qty}</span>
+                                    <button onclick="updateItemQty('${item.id}', 1)" class="px-2.5 py-1.5 hover:bg-brand-greenDark font-bold text-xs active:bg-emerald-900">+</button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== RENDERING: MY LIST (CART) ====================
+        function renderCartView() {
+            const container = document.getElementById('cart-items-container');
+            const emptyState = document.getElementById('cart-empty-state');
+            const completeCard = document.getElementById('complete-shopping-card');
+
+            const metrics = getCartMetrics();
+            document.getElementById('list-total-items').textContent = metrics.totalCount;
+            document.getElementById('list-total-price').textContent = metrics.totalPrice;
+            document.getElementById('list-checked-progress').textContent = `${metrics.checkedCount} of ${metrics.totalCount} picked in store`;
+
+            const cartEntries = Object.entries(state.cart).filter(([id, entry]) => getItemById(id) && entry.qty > 0);
+
+            if (cartEntries.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                completeCard.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            completeCard.classList.remove('hidden');
+
+            // Sort unchecked items first, checked items at bottom for easier in-store shopping
+            cartEntries.sort((a, b) => Number(a[1].checked) - Number(b[1].checked));
+
+            container.innerHTML = cartEntries.map(([id, entry]) => {
+                const item = getItemById(id);
+                const isChecked = entry.checked;
+                return `
+                    <div class="bg-white rounded-2xl p-3 border ${isChecked ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'} shadow-2xs flex items-center justify-between gap-3 transition">
+                        <!-- Left Checkbox + Item Details -->
+                        <div onclick="toggleItemChecked('${id}')" class="flex items-center gap-3 flex-1 cursor-pointer select-none">
+                            <div class="w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
+                                isChecked ? 'bg-brand-green border-brand-green text-white' : 'border-gray-300 bg-white'
+                            }">
+                                ${isChecked ? '<i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>' : ''}
+                            </div>
+
+                            <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0">
+                                ${item.emoji}
+                            </div>
+
+                            <div class="min-w-0">
+                                <h4 class="text-sm font-bold text-gray-800 truncate ${isChecked ? 'line-through text-gray-400' : ''}">
+                                    ${item.name}
+                                </h4>
+                                <p class="text-xs text-gray-500 font-medium">
+                                    ${item.unit} • ₹${item.price * entry.qty}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Right Qty Stepper -->
+                        <div class="flex items-center bg-brand-green text-white rounded-xl overflow-hidden shrink-0 shadow-2xs">
+                            <button onclick="updateItemQty('${id}', -1)" class="px-2.5 py-1.5 hover:bg-brand-greenDark font-bold text-xs">−</button>
+                            <span class="px-2 text-xs font-extrabold">${entry.qty}</span>
+                            <button onclick="updateItemQty('${id}', 1)" class="px-2.5 py-1.5 hover:bg-brand-greenDark font-bold text-xs">+</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // ==================== RENDERING: HISTORY ====================
+        function toggleHistoryExpand(histId) {
+            const idx = state.expandedHistoryIds.indexOf(histId);
+            if (idx > -1) {
+                state.expandedHistoryIds.splice(idx, 1);
+            } else {
+                state.expandedHistoryIds.push(histId);
+            }
+            renderHistoryView();
+        }
+
+        function repeatEntireMonth(histId) {
+            const record = state.history.find(h => h.id === histId);
+            if (!record) return;
+
+            let addedCount = 0;
+            record.items.forEach(entry => {
+                if (getItemById(entry.itemId)) {
+                    const existingQty = state.cart[entry.itemId]?.qty || 0;
+                    state.cart[entry.itemId] = {
+                        qty: existingQty + entry.qty,
+                        checked: false
+                    };
+                    addedCount++;
+                }
+            });
+
+            persistState();
+            renderAll();
+            showToast(`Added ${addedCount} items from ${record.monthLabel}!`, '🎉');
+            switchTab('list');
+        }
+
+        function addSingleHistoryItem(itemId, qty) {
+            const item = getItemById(itemId);
+            if (!item) return;
+
+            const existingQty = state.cart[itemId]?.qty || 0;
+            state.cart[itemId] = {
+                qty: existingQty + qty,
+                checked: false
+            };
+
+            persistState();
+            renderAll();
+            showToast(`Added ${item.name} to list`, '✅');
+        }
+
+        function renderHistoryView() {
+            const container = document.getElementById('history-container');
+
+            if (state.history.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 text-center border border-gray-100">
+                        <div class="text-3xl mb-2">📅</div>
+                        <h3 class="text-sm font-bold text-gray-800">No history saved yet</h3>
+                        <p class="text-xs text-gray-500 mt-1">Complete your shopping list to build your monthly purchase log.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = state.history.map(record => {
+                const isExpanded = state.expandedHistoryIds.includes(record.id);
+
+                // Calculate totals for this historical record
+                let totalQty = 0;
+                let estTotal = 0;
+                record.items.forEach(entry => {
+                    const item = getItemById(entry.itemId);
+                    if (item) {
+                        totalQty += entry.qty;
+                        estTotal += (item.price || 0) * entry.qty;
+                    }
+                });
+
+                return `
+                    <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+                        <!-- Header Row -->
+                        <div onclick="toggleHistoryExpand('${record.id}')" class="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50/70 transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-brand-yellowLight text-amber-700 font-extrabold flex items-center justify-center text-sm">
+                                    📅
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-extrabold text-gray-900">${record.monthLabel}</h3>
+                                    <p class="text-xs text-gray-500 font-medium">${totalQty} items • Est. ₹${estTotal}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[11px] font-semibold text-gray-400">${record.dateSaved}</span>
+                                <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 text-gray-500"></i>
+                            </div>
+                        </div>
+
+                        <!-- Expanded Details -->
+                        ${isExpanded ? `
+                            <div class="px-4 pb-4 pt-1 border-t border-gray-100 bg-gray-50/40">
+                                <div class="space-y-2 my-3">
+                                    ${record.items.map(entry => {
+                                        const item = getItemById(entry.itemId);
+                                        if (!item) return '';
+                                        const inCurrentCart = state.cart[entry.itemId]?.qty > 0;
+                                        return `
+                                            <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-gray-100">
+                                                <div class="flex items-center gap-2.5 min-w-0">
+                                                    <span class="text-base">${item.emoji}</span>
+                                                    <div class="truncate">
+                                                        <p class="text-xs font-bold text-gray-800 truncate">${item.name}</p>
+                                                        <p class="text-[11px] text-gray-500">${item.unit} × ${entry.qty}</p>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onclick="addSingleHistoryItem('${item.id}', ${entry.qty})"
+                                                    class="text-[11px] font-bold px-2.5 py-1 rounded-lg transition shrink-0 ${
+                                                        inCurrentCart 
+                                                        ? 'bg-emerald-50 text-brand-green border border-emerald-200' 
+                                                        : 'bg-gray-100 hover:bg-brand-green hover:text-white text-gray-700'
+                                                    }"
+                                                >
+                                                    ${inCurrentCart ? '✓ In List' : '+ Add'}
+                                                </button>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+
+                                <button 
+                                    onclick="repeatEntireMonth('${record.id}')"
+                                    class="w-full bg-gray-900 hover:bg-gray-800 active:scale-[0.99] text-white text-xs font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition"
+                                >
+                                    <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+                                    <span>Repeat All Items to Current List</span>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // ==================== GLOBAL BADGES & FLOATING BAR ====================
+        function updateGlobalIndicators() {
+            const metrics = getCartMetrics();
+
+            // Bottom Nav Badge
+            const badge = document.getElementById('nav-badge');
+            if (metrics.totalCount > 0) {
+                badge.textContent = metrics.totalCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            // Floating Cart Bar (Show only on Catalog tab when cart has items)
+            const floatingBar = document.getElementById('floating-cart-bar');
+            if (state.activeTab === 'catalog' && metrics.totalCount > 0) {
+                document.getElementById('float-count').textContent = metrics.totalCount;
+                document.getElementById('float-price').textContent = metrics.totalPrice;
+                floatingBar.classList.remove('hidden');
+            } else {
+                floatingBar.classList.add('hidden');
+            }
+        }
+
+        function renderAll() {
+            renderCatalogView();
+            renderCartView();
+            renderHistoryView();
+            updateGlobalIndicators();
+            lucide.createIcons();
+        }
+
+        // ==================== MODALS & UTILITIES ====================
+        function openCustomItemModal(prefillFromSearch = false) {
+            const modal = document.getElementById('modal-custom-item');
+            const nameInput = document.getElementById('custom-name');
+            if (prefillFromSearch) {
+                nameInput.value = document.getElementById('search-input').value;
+            } else {
+                nameInput.value = '';
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => nameInput.focus(), 100);
+        }
+
+        function saveCustomItem(e) {
+            e.preventDefault();
+            const name = document.getElementById('custom-name').value.trim();
+            const category = document.getElementById('custom-category').value;
+            const emoji = document.getElementById('custom-emoji').value.trim() || '📦';
+            const unit = document.getElementById('custom-unit').value.trim() || '1 pack';
+            const price = parseInt(document.getElementById('custom-price').value) || 0;
+            const addImmediately = document.getElementById('custom-add-immediately').checked;
+
+            if (!name) return;
+
+            const newId = 'custom-' + Date.now();
+            const newItem = { id: newId, category, name, unit, price, emoji };
+
+            state.catalog.unshift(newItem);
+
+            if (addImmediately) {
+                state.cart[newId] = { qty: 1, checked: false };
+            }
+
+            persistState();
+            closeModal('modal-custom-item');
+            clearSearch();
+            renderAll();
+            showToast(`"${name}" added!`, '✨');
+        }
+
+        function openSaveHistoryModal() {
+            const now = new Date();
+            const monthYear = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            document.getElementById('history-month-label').value = monthYear;
+            document.getElementById('modal-save-history').classList.remove('hidden');
+        }
+
+        function confirmSaveHistory() {
+            const label = document.getElementById('history-month-label').value.trim() || 'Monthly Ration';
+            const shouldClear = document.getElementById('clear-after-save').checked;
+
+            const itemsList = Object.entries(state.cart)
+                .filter(([id, entry]) => getItemById(id) && entry.qty > 0)
+                .map(([itemId, entry]) => ({ itemId, qty: entry.qty }));
+
+            if (itemsList.length === 0) return;
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+            const newRecord = {
+                id: 'hist-' + Date.now(),
+                monthLabel: label,
+                dateSaved: dateStr,
+                items: itemsList
+            };
+
+            state.history.unshift(newRecord);
+            state.expandedHistoryIds = [newRecord.id];
+
+            if (shouldClear) {
+                state.cart = {};
+            }
+
+            persistState();
+            closeModal('modal-save-history');
+            showToast(`Saved "${label}" to History!`, '🎉');
+            switchTab('history');
+        }
+
+        function confirmClearCart() {
+            document.getElementById('modal-clear-confirm').classList.remove('hidden');
+        }
+
+        function executeClearCart() {
+            state.cart = {};
+            persistState();
+            closeModal('modal-clear-confirm');
+            renderAll();
+            showToast('Shopping list cleared', '🗑️');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // Copy formatted WhatsApp-friendly list
+        function copyListToClipboard() {
+            const entries = Object.entries(state.cart).filter(([id, entry]) => getItemById(id) && entry.qty > 0);
+            if (entries.length === 0) return;
+
+            const metrics = getCartMetrics();
+            let text = `🛒 *Monthly Grocery List*\n\n`;
+            entries.forEach(([id, entry], index) => {
+                const item = getItemById(id);
+                const status = entry.checked ? '✅' : '⬜';
+                text += `${status} ${item.name} (${item.unit}) × ${entry.qty}\n`;
+            });
+            text += `\n📦 Total Items: ${metrics.totalCount} | Est. ₹${metrics.totalPrice}`;
+
+            // Fallback-safe clipboard copy
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('List copied! Ready to paste on WhatsApp', '📋');
+            } catch (err) {
+                showToast('Could not copy list', '⚠️');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        let toastTimeout;
+        function showToast(message, icon = '✅') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = message;
+            document.getElementById('toast-icon').textContent = icon;
+
+            toast.classList.remove('opacity-0');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('opacity-0');
+            }, 2400);
+        }
+
+        // ==================== INITIALIZATION ====================
+        window.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            renderAll();
+        });
+    </script>
+</body>
+</html>
